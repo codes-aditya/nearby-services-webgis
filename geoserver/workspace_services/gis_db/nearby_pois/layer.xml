@@ -1,0 +1,14 @@
+<layer>
+  <name>nearby_pois</name>
+  <id>LayerInfoImpl--652cf164:1a14faf5fd6:-7b11</id>
+  <type>VECTOR</type>
+  <resource class="featureType">
+    <id>FeatureTypeInfoImpl--652cf164:1a14faf5fd6:-7b12</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+  <dateCreated>2026-10-20 06:04:08.350 UTC</dateCreated>
+  <dateModified>2026-10-20 06:13:51.950 UTC</dateModified>
+</layer>

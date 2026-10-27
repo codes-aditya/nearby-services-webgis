@@ -1,0 +1,101 @@
+<featureType>
+  <id>FeatureTypeInfoImpl--652cf164:1a14faf5fd6:-7b12</id>
+  <name>nearby_pois</name>
+  <nativeName>nearby_pois</nativeName>
+  <namespace>
+    <id>NamespaceInfoImpl--652cf164:1a14faf5fd6:-7b16</id>
+  </namespace>
+  <title>nearby_pois</title>
+  <keywords>
+    <string>features</string>
+    <string>nearby_pois</string>
+  </keywords>
+  <srs>EPSG:4326</srs>
+  <nativeBoundingBox>
+    <minx>73.7211392</minx>
+    <maxx>73.9995395</maxx>
+    <miny>18.4243102</miny>
+    <maxy>18.6696627</maxy>
+  </nativeBoundingBox>
+  <latLonBoundingBox>
+    <minx>73.7211392</minx>
+    <maxx>73.9995395</maxx>
+    <miny>18.4243102</miny>
+    <maxy>18.6696627</maxy>
+    <crs>EPSG:4326</crs>
+  </latLonBoundingBox>
+  <projectionPolicy>FORCE_DECLARED</projectionPolicy>
+  <enabled>true</enabled>
+  <metadata>
+    <entry key="JDBC_VIRTUAL_TABLE">
+      <virtualTable>
+        <name>nearby_pois</name>
+        <sql>SELECT id, name, category, subcategory, address, phone, website, opening_hours,&#xd;
+  ST_Y(geom) AS y_lat,&#xd;
+  ST_X(geom) AS x_lng,&#xd;
+  ST_Distance(geom::geography,&#xd;
+    ST_SetSRID(ST_MakePoint(%lng%,%lat%),4326)::geography) AS dist_m,&#xd;
+  geom&#xd;
+FROM poi&#xd;
+WHERE category = ANY(string_to_array(&apos;%cats%&apos;,&apos;|&apos;))&#xd;
+  AND (&apos;%sub%&apos; = &apos;all&apos; OR subcategory = &apos;%sub%&apos;)&#xd;
+  AND ST_DWithin(geom::geography,&#xd;
+    ST_SetSRID(ST_MakePoint(%lng%,%lat%),4326)::geography, %radius%)&#xd;
+ORDER BY dist_m&#xd;
+LIMIT %n%
+</sql>
+        <escapeSql>false</escapeSql>
+        <keyColumn>geom</keyColumn>
+        <geometry>
+          <name>geom</name>
+          <type>Point</type>
+          <srid>4326</srid>
+        </geometry>
+        <parameter>
+          <name>sub</name>
+          <defaultValue>all</defaultValue>
+          <regexpValidator>^[A-Za-z0-9_ ]+$</regexpValidator>
+        </parameter>
+        <parameter>
+          <name>cats</name>
+          <defaultValue>hospital</defaultValue>
+          <regexpValidator>^[a-z_|]+$</regexpValidator>
+        </parameter>
+        <parameter>
+          <name>lng</name>
+          <defaultValue>73.8567</defaultValue>
+          <regexpValidator>^-?[0-9]+(\.[0-9]+)?$</regexpValidator>
+        </parameter>
+        <parameter>
+          <name>radius</name>
+          <defaultValue>3000</defaultValue>
+          <regexpValidator>^[0-9]+$</regexpValidator>
+        </parameter>
+        <parameter>
+          <name>lat</name>
+          <defaultValue>18.5204</defaultValue>
+          <regexpValidator>^-?[0-9]+(\.[0-9]+)?$</regexpValidator>
+        </parameter>
+        <parameter>
+          <name>n</name>
+          <defaultValue>20</defaultValue>
+          <regexpValidator>^[0-9]+$</regexpValidator>
+        </parameter>
+      </virtualTable>
+    </entry>
+  </metadata>
+  <store class="dataStore">
+    <id>DataStoreInfoImpl--652cf164:1a14faf5fd6:-7b15</id>
+  </store>
+  <serviceConfiguration>false</serviceConfiguration>
+  <simpleConversionEnabled>false</simpleConversionEnabled>
+  <internationalTitle/>
+  <internationalAbstract/>
+  <maxFeatures>0</maxFeatures>
+  <numDecimals>0</numDecimals>
+  <padWithZeros>false</padWithZeros>
+  <forcedDecimal>false</forcedDecimal>
+  <overridingServiceSRS>false</overridingServiceSRS>
+  <skipNumberMatched>false</skipNumberMatched>
+  <circularArcPresent>false</circularArcPresent>
+</featureType>

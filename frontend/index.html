@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nearby Services Finder</title>
+<link rel="stylesheet" href="leaflet.css">
+<style>
+:root{--ink:#0f172a;--mut:#64748b;--line:#e2e8f0;--acc:#0f766e;--soft:#f8fafc}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;font:14px/1.45 "Segoe UI Variable","Segoe UI",system-ui,sans-serif;color:var(--ink);background:#e8eef3}
+#map{position:absolute;inset:0}
+button,input,select{font:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible,.card:focus-visible{outline:3px solid #5eead4;outline-offset:2px}
+
+.panel{position:absolute;z-index:1000;left:16px;top:16px;bottom:16px;width:400px;background:#fff;border-radius:22px;box-shadow:0 20px 60px #0f172a38;display:flex;flex-direction:column;overflow:hidden}
+.brand{display:flex;gap:12px;align-items:center;padding:16px 20px;border-bottom:1px solid var(--line)}
+.logo{width:42px;height:42px;border-radius:13px;background:var(--acc);display:grid;place-items:center;font-size:21px;flex:none}
+.brand h1{font-size:19px;margin:0;letter-spacing:-.3px}
+.brand p{margin:1px 0 0;font-size:12.5px;color:var(--mut)}
+.scroll{overflow-y:auto;flex:1;padding:16px 20px 20px;display:flex;flex-direction:column;gap:16px}
+
+details.f>summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:15px;padding:2px 0 12px}
+details.f>summary::-webkit-details-marker{display:none}
+details.f>summary::after{content:"Edit";font-size:12px;font-weight:600;color:var(--acc);background:#ecfdf5;padding:4px 11px;border-radius:99px}
+details.f[open]>summary::after{content:"Hide"}
+.fld{margin-bottom:15px}
+.lbl{display:block;font-size:12.5px;font-weight:600;color:#334155;margin-bottom:7px}
+.row{display:flex;gap:8px}.row>*{flex:1;min-width:0}
+input,select{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:11px;background:#fff;color:var(--ink)}
+input:disabled,select:disabled{background:#f1f5f9;color:#94a3b8}
+input[type=range]{padding:0;accent-color:var(--acc);height:22px}
+.btn{border:0;border-radius:11px;padding:10px 12px;font-weight:700;font-size:13px;cursor:pointer;background:#eef2f6;color:#334155;text-decoration:none;text-align:center;display:block;transition:background .15s}
+.btn:hover{background:#e2e8f0}.btn:disabled{opacity:.6;cursor:wait}
+.btn.p{background:var(--acc);color:#fff;font-size:15px;padding:13px}.btn.p:hover{background:#115e59}
+.hint{font-size:12px;color:var(--mut);margin:8px 0 0}
+
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{position:relative}.chip input{position:absolute;opacity:0;width:1px;height:1px}
+.chip span{display:inline-flex;gap:6px;align-items:center;padding:7px 12px;border-radius:99px;border:1.5px solid var(--line);font-size:13px;font-weight:600;cursor:pointer;background:#fff;color:#475569;transition:.15s}
+.chip input:checked+span{background:var(--c);border-color:var(--c);color:#fff}
+.chip input:focus-visible+span{outline:3px solid #5eead4;outline-offset:2px}
+
+.seg{display:grid;grid-template-columns:repeat(3,1fr);background:#f1f5f9;border-radius:12px;padding:3px;gap:3px}
+.seg button{border:0;background:none;padding:9px 4px;border-radius:10px;font-size:13px;font-weight:600;color:var(--mut);cursor:pointer}
+.seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 5px #0f172a22}
+
+.msg{padding:11px 13px;border-radius:12px;font-size:13px;line-height:1.45}
+.msg:empty{display:none}
+.msg.err{background:#fee2e2;color:#991b1b}.msg.info{background:#e0f2fe;color:#075985}.msg.warn{background:#fef3c7;color:#92400e}
+
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stats[hidden]{display:none}
+.stat{background:var(--soft);border:1px solid var(--line);border-radius:13px;padding:10px 12px}
+.stat b{display:block;font-size:20px;letter-spacing:-.4px}.stat span{font-size:12px;color:var(--mut)}
+#list{display:flex;flex-direction:column;gap:8px}
+.empty{border:1.5px dashed #cbd5e1;border-radius:14px;padding:22px 16px;text-align:center;color:var(--mut);font-size:13px}
+.card{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:14px;border:1px solid var(--line);border-left:5px solid var(--c);cursor:pointer;background:#fff;transition:box-shadow .15s}
+.card:hover{box-shadow:0 4px 16px #0f172a14}
+.card.sel{background:#f0fdfa;border-color:#5eead4;border-left-color:var(--c);box-shadow:0 0 0 2px #99f6e4}
+.card .ic{font-size:21px;flex:none}.card b{font-size:14px;line-height:1.3;display:block}
+.card .m{font-size:12px;color:var(--mut)}
+.card .dist{margin-left:auto;font-weight:800;font-size:13px;color:var(--c);white-space:nowrap;padding-left:6px}
+
+#dt{position:absolute;z-index:1000;right:16px;top:70px;width:330px;max-height:calc(100% - 100px);overflow:auto;background:#fff;border-radius:20px;box-shadow:0 20px 60px #0f172a38;padding:18px}
+#dt[hidden]{display:none}
+#dt h2{font-size:17px;margin:0 28px 4px 0;letter-spacing:-.2px;line-height:1.3}
+.tag{display:inline-block;font-size:12px;font-weight:700;color:#fff;background:var(--c);padding:3px 10px;border-radius:99px;margin-bottom:10px}
+#dt dl{margin:6px 0 14px;display:grid;grid-template-columns:84px 1fr;gap:7px 10px;font-size:13px}
+#dt dt{color:var(--mut)}#dt dd{margin:0;overflow-wrap:anywhere}
+.x{position:absolute;right:12px;top:12px;width:30px;height:30px;border-radius:50%;background:#f1f5f9;border:0;font-size:17px;cursor:pointer;color:#475569}
+
+.pin{width:34px;height:34px;border-radius:50%;border:3px solid #fff;display:grid;place-items:center;font-size:16px;box-shadow:0 3px 10px #0f172a55;transition:transform .15s}
+.pin.sel{transform:scale(1.35);box-shadow:0 0 0 4px #0f766e77,0 3px 10px #0f172a55}
+.pin.me{background:none;border:0;box-shadow:none;font-size:28px}
+.leaflet-popup-content-wrapper{border-radius:14px}
+
+@media(max-width:820px){
+ .panel{left:8px;right:8px;top:auto;bottom:8px;width:auto;height:56vh}
+ #dt{left:8px;right:8px;top:8px;width:auto;max-height:40vh}
+}
+</style>
+</head>
+<body>
+<div id="map" aria-label="Map"></div>
+
+<section class="panel">
+  <div class="brand">
+    <div class="logo">📍</div>
+    <div><h1>Nearby Services</h1><p>Hospitals, pharmacies, police and more in Pune</p></div>
+  </div>
+  <div class="scroll">
+    <details class="f" id="filters" open>
+      <summary>Search settings</summary>
+      <div class="fld">
+        <span class="lbl">Location</span>
+        <div class="row">
+          <input id="lat" inputmode="decimal" placeholder="Latitude 18.5204" aria-label="Latitude">
+          <input id="lng" inputmode="decimal" placeholder="Longitude 73.8567" aria-label="Longitude">
+        </div>
+        <div class="row" style="margin-top:8px">
+          <button class="btn" id="coordBtn">Use coordinates</button>
+          <button class="btn" id="gps">My location</button>
+        </div>
+        <p class="hint">Or click anywhere on the map.</p>
+      </div>
+      <div class="fld">
+        <span class="lbl">What are you looking for?</span>
+        <div class="chips" id="cats"></div>
+      </div>
+      <div class="fld">
+        <label class="lbl" for="sub">Subcategory</label>
+        <select id="sub"><option value="all">All subcategories</option></select>
+      </div>
+      <div class="fld">
+        <span class="lbl">Search mode</span>
+        <div class="seg" id="seg">
+          <button data-m="both" class="on">Radius + N</button>
+          <button data-m="radius">Radius</button>
+          <button data-m="nearest">Nearest N</button>
+        </div>
+      </div>
+      <div class="fld">
+        <label class="lbl" for="radius">Radius: <b id="rl">3 km</b></label>
+        <input type="range" id="radius" min="250" max="20000" step="250" value="3000">
+      </div>
+      <div class="fld">
+        <label class="lbl" for="n">Number of results (1 to 100)</label>
+        <input type="number" id="n" min="1" max="100" value="10">
+      </div>
+      <button class="btn p" id="go" style="width:100%">Find services</button>
+    </details>
+
+    <div class="msg info" id="msg">Pick a location to begin.</div>
+
+    <div class="stats" id="stats" hidden>
+      <div class="stat"><b id="s1">0</b><span>Found</span></div>
+      <div class="stat"><b id="s2">-</b><span>Nearest</span></div>
+      <div class="stat"><b id="s3">-</b><span>Farthest</span></div>
+    </div>
+    <div id="list"><div class="empty">Results will appear here, nearest first.</div></div>
+  </div>
+</section>
+
+<aside id="dt" hidden></aside>
+
+<script src="leaflet.js"></script>
+<script>
+// Opened from GeoServer (http://localhost:8080/geoserver/www/) it uses the same server; otherwise localhost:8080.
+const GS = location.port === "8080" ? location.origin + "/geoserver" : "http://localhost:8080/geoserver";
+const OWS = GS + "/services/ows";
+const CATS = {hospital:["🏥","Hospital","#e11d48"],clinic:["🩺","Clinic","#db2777"],pharmacy:["💊","Pharmacy","#16a34a"],
+  police:["🚓","Police","#2563eb"],atm:["🏧","ATM","#7c3aed"],school:["🏫","School","#d97706"],fuel:["⛽","Fuel","#475569"],park:["🌳","Park","#15803d"]};
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt = d => d < 1000 ? Math.round(d) + " m" : (d / 1000).toFixed(2) + " km";
+const ico = c => (CATS[c] || ["📍"])[0];
+const cname = c => (CATS[c] || [0, c])[1];
+const col = c => (CATS[c] || [0, 0, "#0f766e"])[2];
+
+let origin = null, places = [], selId = null, originMk = null, circle = null, subs = {}, mode = "both";
+const map = L.map("map", {zoomControl: false}).setView([18.5204, 73.8567], 12);
+L.control.zoom({position: "bottomright"}).addTo(map);
+const osm = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom: 19, attribution: "&copy; OpenStreetMap contributors"}).addTo(map);
+// Published GeoServer layer (WMS) showing every service point; toggle it in the layer control
+const wms = L.tileLayer.wms(GS + "/services/wms", {layers: "services:poi", format: "image/png", transparent: true, opacity: .7});
+L.control.layers({"OpenStreetMap": osm}, {"GeoServer WMS: all services": wms}).addTo(map);
+const markers = L.layerGroup().addTo(map);
+
+function msg(type, text) { const m = $("msg"); m.className = "msg " + type; m.textContent = text; }
+const pinIcon = (c, sel) => L.divIcon({className: "", html: `<div class="pin${sel ? " sel" : ""}" style="background:${col(c)}">${ico(c)}</div>`,
+  iconSize: [34, 34], iconAnchor: [17, 17], popupAnchor: [0, -20]});
+
+// ---------- categories and subcategories ----------
+$("cats").innerHTML = Object.entries(CATS).map(([k, v]) =>
+  `<label class="chip" style="--c:${v[2]}"><input type="checkbox" class="cat" value="${k}" ${k === "hospital" || k === "pharmacy" ? "checked" : ""}><span>${v[0]} ${v[1]}</span></label>`).join("");
+function fillSubs() {
+  const cur = $("sub").value, set = new Set();
+  document.querySelectorAll(".cat:checked").forEach(c => (subs[c.value] || []).forEach(s => set.add(s)));
+  $("sub").innerHTML = '<option value="all">All subcategories</option>' + [...set].sort().map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join("");
+  if (set.has(cur)) $("sub").value = cur;
+}
+$("cats").addEventListener("change", fillSubs);
+async function loadSubs() {
+  try {
+    const r = await fetch(OWS + "?" + new URLSearchParams({service: "WFS", version: "2.0.0", request: "GetFeature", typeNames: "services:poi",
+      outputFormat: "application/json", propertyName: "category,subcategory", count: "20000"}));
+    const j = await r.json(), tmp = {};
+    j.features.forEach(f => { const c = f.properties.category, s = f.properties.subcategory; if (c && s) (tmp[c] = tmp[c] || new Set()).add(s); });
+    Object.keys(tmp).forEach(k => subs[k] = [...tmp[k]]);
+    fillSubs();
+  } catch (e) { console.warn("Could not load subcategories", e); }
+}
+
+// ---------- location input ----------
+function drawCircle(r) {
+  if (!origin) return;
+  if (circle) circle.setLatLng([origin.lat, origin.lng]).setRadius(r);
+  else circle = L.circle([origin.lat, origin.lng], {radius: r, color: "#0f766e", weight: 2, fillOpacity: .08, dashArray: "6 5"}).addTo(map);
+}
+function setOrigin(lat, lng, zoom) {
+  origin = {lat, lng};
+  $("lat").value = lat.toFixed(6); $("lng").value = lng.toFixed(6);
+  if (originMk) originMk.setLatLng([lat, lng]);
+  else originMk = L.marker([lat, lng], {icon: L.divIcon({className: "", html: '<div class="pin me">📍</div>', iconSize: [34, 34], iconAnchor: [17, 32]}), zIndexOffset: 1000}).addTo(map).bindPopup("Search location");
+  if (zoom) map.setView([lat, lng], zoom);
+  drawCircle(mode === "nearest" ? 0 : +$("radius").value);
+}
+function readCoords() {
+  const a = $("lat").value.trim(), b = $("lng").value.trim();
+  if (a === "" || b === "") return msg("err", "Choose a location: click the map, type latitude and longitude, or use My location."), null;
+  const lat = Number(a), lng = Number(b);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return msg("err", "Latitude and longitude must be numbers, for example 18.5204 and 73.8567."), null;
+  if (lat < -90 || lat > 90) return msg("err", "Latitude must be between -90 and 90."), null;
+  if (lng < -180 || lng > 180) return msg("err", "Longitude must be between -180 and 180."), null;
+  return {lat, lng};
+}
+map.on("click", e => { setOrigin(e.latlng.lat, e.latlng.lng); msg("info", "Location set. Press Find services."); });
+$("coordBtn").onclick = () => { const c = readCoords(); if (c) { setOrigin(c.lat, c.lng, 15); msg("info", "Location set. Press Find services."); } };
+$("gps").onclick = () => {
+  if (!navigator.geolocation) return msg("err", "This browser does not support geolocation. Click the map or type coordinates instead.");
+  $("gps").disabled = true;
+  navigator.geolocation.getCurrentPosition(p => {
+    $("gps").disabled = false;
+    setOrigin(p.coords.latitude, p.coords.longitude, 15);
+    msg("info", "Using your location (accuracy about " + Math.round(p.coords.accuracy) + " m). Press Find services.");
+  }, e => {
+    $("gps").disabled = false;
+    msg("err", {1: "Location permission was denied. Allow location access in the browser, or click the map or type coordinates instead.",
+      2: "Your position is unavailable. Click the map or type coordinates instead.",
+      3: "The location request timed out. Try again, or click the map."}[e.code] || "Could not get your location.");
+  }, {enableHighAccuracy: true, timeout: 12000});
+};
+$("radius").oninput = () => { const r = +$("radius").value; $("rl").textContent = r >= 1000 ? r / 1000 + " km" : r + " m"; if (mode !== "nearest") drawCircle(r); };
+$("seg").onclick = e => {
+  const b = e.target.closest("button"); if (!b) return;
+  mode = b.dataset.m;
+  document.querySelectorAll("#seg button").forEach(x => x.classList.toggle("on", x === b));
+  $("radius").disabled = mode === "nearest"; $("n").disabled = mode === "radius";
+  if (circle) circle.setRadius(mode === "nearest" ? 0 : +$("radius").value);
+};
+
+// ---------- search ----------
+async function search() {
+  const c = readCoords(); if (!c) return;
+  setOrigin(c.lat, c.lng);
+  const cats = [...document.querySelectorAll(".cat:checked")].map(x => x.value);
+  if (!cats.length) return msg("err", "Select at least one category.");
+  let radius = +$("radius").value, n = Number($("n").value);
+  if (mode !== "radius" && (!Number.isInteger(n) || n < 1 || n > 100)) return msg("err", "Number of results must be a whole number from 1 to 100.");
+  if (mode === "radius") n = 500;
+  if (mode === "nearest") radius = 100000;
+  const vp = `lat:${c.lat.toFixed(6)};lng:${c.lng.toFixed(6)};radius:${Math.round(radius)};n:${n};cats:${cats.join("|")};sub:${$("sub").value}`;
+  const url = OWS + "?" + new URLSearchParams({service: "WFS", version: "2.0.0", request: "GetFeature", typeNames: "services:nearby_pois",
+    outputFormat: "application/json", viewparams: vp});
+  $("go").disabled = true; msg("info", "Searching…");
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 20000);
+  try {
+    const res = await fetch(url, {signal: ctl.signal});
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); } catch (e) { throw new Error("GeoServer returned an error: " + text.replace(/<[^>]+>/g, " ").trim().slice(0, 200)); }
+    if (!res.ok) throw new Error("GeoServer error " + res.status);
+    places = data.features.map(f => {
+      const p = f.properties, g = f.geometry && f.geometry.coordinates;
+      return {id: p.id, name: p.name || "Unnamed " + cname(p.category).toLowerCase(), category: p.category, sub: p.subcategory, address: p.address,
+        phone: p.phone, website: p.website, hours: p.opening_hours, d: p.dist_m, lat: p.y_lat ?? (g && g[1]), lng: p.x_lng ?? (g && g[0])};
+    }).filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng)).sort((a, b) => a.d - b.d);
+    show(radius);
+  } catch (e) {
+    places = []; selId = null; markers.clearLayers(); $("stats").hidden = true; $("dt").hidden = true;
+    $("list").innerHTML = '<div class="empty">No results to show.</div>';
+    msg("err", e.name === "AbortError" ? "The search took too long. Try a smaller radius." :
+      e instanceof TypeError ? "Cannot reach GeoServer at " + GS + ". Check that GeoServer is running and open this page from http://localhost:8080/geoserver/www/index.html." : e.message);
+  } finally { clearTimeout(timer); $("go").disabled = false; }
+}
+$("go").onclick = search;
+
+function show(radius) {
+  markers.clearLayers(); selId = null; $("dt").hidden = true;
+  const list = $("list"); list.innerHTML = "";
+  if (!places.length) {
+    $("stats").hidden = true;
+    list.innerHTML = '<div class="empty">Nothing found here. Try a bigger radius, more categories, or Nearest N mode.</div>';
+    drawCircle(mode === "nearest" ? 0 : radius);
+    return msg("warn", mode === "nearest" ? "No matching services found. Try other categories or a different location." :
+      "No services found within " + fmt(radius) + ". Increase the radius, add categories, or choose Nearest N.");
+  }
+  $("stats").hidden = false;
+  $("s1").textContent = places.length; $("s2").textContent = fmt(places[0].d); $("s3").textContent = fmt(places[places.length - 1].d);
+  drawCircle(mode === "nearest" ? places[places.length - 1].d : radius);
+  places.forEach(p => {
+    p.mk = L.marker([p.lat, p.lng], {icon: pinIcon(p.category), title: p.name}).addTo(markers)
+      .bindPopup(`<b>${esc(p.name)}</b><br>${esc(cname(p.category))} · ${fmt(p.d)} away`);
+    p.mk.on("click", () => select(p.id, false));
+    const c = document.createElement("div");
+    c.className = "card"; c.id = "c" + p.id; c.tabIndex = 0; c.style.setProperty("--c", col(p.category));
+    c.innerHTML = `<div class="ic">${ico(p.category)}</div><div><b>${esc(p.name)}</b><div class="m">${esc(cname(p.category))}${p.address ? " · " + esc(p.address) : ""}</div></div><div class="dist">${fmt(p.d)}</div>`;
+    c.onclick = () => select(p.id, true);
+    c.onkeydown = e => { if (e.key === "Enter") select(p.id, true); };
+    list.append(c);
+  });
+  map.fitBounds(L.latLngBounds([[origin.lat, origin.lng], ...places.map(p => [p.lat, p.lng])]), {paddingTopLeft: [440, 40], paddingBottomRight: [40, 40], maxZoom: 16});
+  $("filters").open = false;
+  msg("info", places.length + (places.length === 1 ? " service" : " services") + " found, sorted nearest first.");
+}
+
+// ---------- selection and details panel ----------
+function select(id, pan) {
+  selId = id;
+  places.forEach(p => { p.mk.setIcon(pinIcon(p.category, p.id === id)); $("c" + p.id).classList.toggle("sel", p.id === id); });
+  const p = places.find(x => x.id === id); if (!p) return;
+  $("c" + id).scrollIntoView({block: "nearest", behavior: "smooth"});
+  p.mk.openPopup();
+  if (pan) map.setView([p.lat, p.lng], Math.max(map.getZoom(), 16));
+  const row = (k, v) => v ? `<dt>${k}</dt><dd>${v}</dd>` : "";
+  const site = p.website && /^https?:\/\//i.test(p.website) ? `<a href="${esc(p.website)}" target="_blank" rel="noopener noreferrer">${esc(p.website)}</a>` : "";
+  $("dt").hidden = false; $("dt").style.setProperty("--c", col(p.category));
+  $("dt").innerHTML = `<button class="x" aria-label="Close details" onclick="$('dt').hidden=true">×</button>
+    <span class="tag">${ico(p.category)} ${esc(cname(p.category))}</span>
+    <h2>${esc(p.name)}</h2>
+    <dl>${row("Distance", "<b>" + fmt(p.d) + "</b>")}${row("Subcategory", esc(p.sub))}${row("Address", esc(p.address))}
+    ${row("Phone", p.phone ? `<a href="tel:${esc(p.phone)}">${esc(p.phone)}</a>` : "")}${row("Website", site)}${row("Hours", esc(p.hours))}
+    ${row("Coordinates", p.lat.toFixed(5) + ", " + p.lng.toFixed(5))}</dl>
+    <a class="btn p" target="_blank" rel="noopener noreferrer" href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}">Get directions</a>`;
+}
+
+$("radius").oninput();
+loadSubs();
+</script>
+</body>
+</html>
